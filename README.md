@@ -1,4 +1,4 @@
-# 🐳 APONTI Academy - fap 2026 - Projeto Vagrant - Jenkins + Produção Node.js
+# 🐳 APONTI Academy - FAP 2026 - Projeto Vagrant - Jenkins + Produção Node.js
 
 > Ambiente completo de **CI/CD** (Integração Contínua / Entrega Contínua) criado com **Vagrant**, **VirtualBox**, **Jenkins** e **Node.js**.
 
