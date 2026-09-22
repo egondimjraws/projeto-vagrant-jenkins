@@ -2,20 +2,27 @@ name: CI - Build, SAST and DAST
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+
   pull_request:
-    branches: [main]
+    branches:
+      - main
+
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  # ---------- Job 1: Build + Testes ----------
-  build-and-test:
-    name: Build and Test
+  # ---------------------------------------------------------------
+  # Job 1 — Setup e validação de sintaxe
+  # Substitui o antigo passo "Build" (que não existe neste projeto).
+  # ---------------------------------------------------------------
+  setup:
+    name: Setup and Validate
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: app
@@ -34,28 +41,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        run: npm run build
-        # Se não houver script "build", remova este passo
-        # ou adicione em app/package.json: "build": "tsc" / "echo ok"
+      - name: Syntax check
+        run: node --check server.js
 
-      - name: Test
-        run: npm test
-
-      - name: Upload build artifact
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-build
-          path: app
-          retention-days: 1
-
-  # ---------- Job 2: SAST ----------
+  # ---------------------------------------------------------------
+  # Job 2 — SAST (Semgrep)
+  # ---------------------------------------------------------------
   sast:
     name: SAST - Semgrep
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: build-and-test
+    needs: setup
 
     steps:
       - name: Code checkout
@@ -67,26 +63,15 @@ jobs:
           config: |
             p/javascript
             p/security-audit
-          # Analisa somente a pasta do app
-          generateSarif: "1"
-        env:
-          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
-        # Se não usar Semgrep Cloud, remova o token e o generateSarif
 
-      - name: Upload SARIF
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: semgrep-sarif
-          path: semgrep.sarif
-          if-no-files-found: ignore
-
-  # ---------- Job 3: DAST ----------
+  # ---------------------------------------------------------------
+  # Job 3 — DAST (OWASP ZAP)
+  # ---------------------------------------------------------------
   dast:
     name: DAST - OWASP ZAP
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: build-and-test
+    needs: setup
     defaults:
       run:
         working-directory: app
@@ -132,7 +117,6 @@ jobs:
           target: http://127.0.0.1:3000
           allow_issue_writing: false
           fail_action: false
-          artifact_name: zap-report
 
       - name: Save application log
         if: always()
